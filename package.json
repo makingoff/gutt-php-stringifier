@@ -21,6 +21,7 @@
     "chai-as-promised": "^6.0.0",
     "mocha": "^3.2.0"
   },
+  "repository": "https://github.com/makingoff/gutt-php-stringifier",
   "dependencies": {
     "gutt": "0.0.4"
   }
