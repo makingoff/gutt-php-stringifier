@@ -119,19 +119,39 @@ module.exports = {
     '    return $key;\n' +
     '  }\n' +
     '}\n' +
+    'if (!function_exists(\'generateHtml\')) {\n' +
+    '  function generateHtml($elements) {\n'+
+    '    $result = [];\n' +
+    '    foreach ($elements as $element) {\n' +
+    '      if (isset($element[\'comment\'])) {\n' +
+    '        $result[] = \'<!--\' . $element[\'comment\'] . \'-->\';\n' +
+    '      } elseif (isset($element[\'text\'])) {\n' +
+    '        $result[] = $element[\'text\'];\n' +
+    '      } elseif (isset($element[\'tag\'])) {\n' +
+    '        $attrs = \'\';\n' +
+    '        foreach ($element[\'attrs\'] as $key => $value)\n' +
+    '        $attrs .= " " . $key . ($value !== false && $value !== null ? "=\\"" . $value . "\\"" : "");\n' +
+    '        $result[] = \'<\' . $element[\'tag\'] . $attrs .\n' +
+    '        (isset($element[\'children\']) ? \'>\' . generateHtml($element[\'children\']) . \'</\' . $element[\'tag\'] . \'>\' : ($element[\'tag\'] === \'!DOCTYPE\' ? \'\' : \' /\') . \'>\');\n' +
+    '      }\n' +
+    '    }\n' +
+    '    return implode(\'\', $result);\n' +
+    '  }\n'+
+    '}\n' +
     '$__components = [];\n' +
-    'return function ($__data = [], $__children = false) {\n' +
+    'return function ($__data = [], $__children = false, $returnAsElements = false) {\n' +
+    '  $state = [];\n' +
     '  foreach ($__data as $__key => $__value) {\n' +
-    '    $$__key = $__value;\n' +
+    '    $state[$__key] = $__value;\n' +
     '  }\n' +
+    '  $children0 = [];\n' +
     '  ob_start();\n' +
     '// >>> GENERATED CODE\n' +
     '?>\n',
   postfix:
     '<?php\n' +
     '// <<< GENERATED CODE\n' +
-    '  $content = ob_get_contents();\n' +
-    '  ob_end_clean();\n' +
-    '  return $content;\n' +
+    '   ob_end_clean();\n' +
+    '  return $returnAsElements !== false ? $children0 : generateHtml($children0);\n' +
     '};'
 }

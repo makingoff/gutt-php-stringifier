@@ -9,4 +9,4 @@ if (empty($jsonParams)) {
 
 $template = include(__DIR__ . '/../../tmp/' . $templateName . '.php');
 
-echo $template(json_decode($jsonParams, true));
+print_r($template(json_decode($jsonParams, true)));

@@ -30,19 +30,18 @@ function handleFunction (tree) {
       params = handleParams(tree.attrs)
 
       return 'str_replace(' + params[1] + ', ' + params[2] + ', ' + params[0] + ')'
-    case 'str_pad':
+    case 'str_pad_right':
       params = handleParams(tree.attrs)
 
-      if (!params[3]) {
-        params[3] = 'STR_PAD_RIGHT'
-      }
+      return 'str_pad(' + params.join(', ') + ', STR_PAD_RIGHT)'
+    case 'str_pad_left':
+      params = handleParams(tree.attrs)
 
-      params[3] = params[3].replace('$STRPADLEFT', 'STR_PAD_LEFT')
-      params[3] = params[3].replace('$STRPADRIGHT', 'STR_PAD_RIGHT')
-      params[3] = params[3].replace('$STRPADBOTH', 'STR_PAD_BOTH')
+      return 'str_pad(' + params.join(', ') + ', STR_PAD_LEFT)'
+    case 'str_pad_both':
+      params = handleParams(tree.attrs)
 
-      return 'str_pad(' + params.join(', ') + ')'
-
+      return 'str_pad(' + params.join(', ') + ', STR_PAD_BOTH)'
     case 'str_split':
       params = handleParams(tree.attrs)
 
@@ -189,16 +188,19 @@ function prepareVariableKey (key) {
 
 function expression (tree) {
   var str = ''
+  var keys
 
   if (typeof tree === 'string') return tree
 
   switch (tree.type) {
     case 'var':
-      if (tree.value === 'children') {
-        tree.value = '__children'
-      }
+      if (tree.value === 'children') return '$__children'
 
-      str += (~consts.indexOf(tree.value) ? '' : '$') + tree.value + tree.keys.map(function (key) {
+      if (~consts.indexOf(tree.value)) return tree.value
+
+      keys = [{type: 'str', value: tree.value}].concat(tree.keys);
+
+      str += '$state' + keys.map(function (key) {
         return '[' + prepareVariableKey(key) + ']'
       }).join('')
 
