@@ -572,7 +572,7 @@ describe ('PHP stringifier', function () {
     var wrapTemplate =
       '<component>' +
       '<for-each item={$item} from={$children}>' +
-      '<if test={$item.tag?}>' +
+      '<if test={$item.tag? && $item.tag == \'item\'}>' +
       '<variable name={$item.tag} value="option" />' +
       '</if>' +
       '{$item}' +
@@ -595,6 +595,58 @@ describe ('PHP stringifier', function () {
         return parse(template)
       })
       .should.eventually.equal('<option>line1</option><option>line2</option><option>line3</option><option>line4</option>')
+  })
+
+  it ('using template node', function () {
+    var template =
+      '<component>' +
+      '<template name={$sub-template}>' +
+      '<item>line1</item>' +
+      '<item>line2</item>' +
+      '<item>line3</item>' +
+      '<item>line4</item>' +
+      '</template>' +
+      '{$sub-template}' +
+      '</component>'
+
+    return parse(template).should.eventually.equal('<item>line1</item><item>line2</item><item>line3</item><item>line4</item>')
+  })
+
+  it ('using template node', function () {
+    var tempWrapName = generateName()
+    var wrapTemplate =
+      '<component>' +
+      '<param name={$sub-template} value={[]} />' +
+      '<for-each item={$child} key={$index} from={$sub-template}>' +
+      '<div data-index={$index}>{$child}</div>' +
+      '</for-each>' +
+      '{$children}' +
+      '</component>'
+
+    var template =
+      '<component>' +
+      '<variable name={$amount} value={22} />' +
+      '<import name={"wrap-component"} from="./' + tempWrapName + '" />' +
+      '<template name={$sub-template}>' +
+      '<item>line1</item>' +
+      '<item>line{$amount}</item>' +
+      '<item>line3</item>' +
+      '<item>line4</item>' +
+      '</template>' +
+      '<wrap-component sub-template={$sub-template}>' +
+      'text as children' +
+      '</wrap-component>' +
+      '</component>'
+
+    return parseAndWriteFile(wrapTemplate, tempWrapName + '.php')
+      .then(function () {
+        return parse(template)
+      })
+      .should.eventually.equal(
+        '<div data-index="0"><item>line1</item></div><div data-index="1"><item>line22</item></div>' +
+        '<div data-index="2"><item>line3</item></div><div data-index="3"><item>line4</item></div>' +
+        'text as children'
+      )
   })
 
   it ('variables with dash', function () {

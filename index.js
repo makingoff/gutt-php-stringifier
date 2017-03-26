@@ -523,6 +523,28 @@ function logicNodeHandler (node, id) {
   )
 }
 
+function handleTemplateStatement (node, id) {
+  var params = extractValuesFromAttrs(node.attrs, ['name'])
+
+  if (!params.name) {
+    throw new ParseError('<template /> must contain `name`-attribute', {
+      line: node.line,
+      column: node.column
+    })
+  }
+
+  if (node.isSingle) {
+    throw new ParseError('<template /> must not be self-closing tag', {
+      line: node.line,
+      column: node.column
+    })
+  }
+
+  var children = '<?php $children' + node.id + ' = [];?>' + handleTemplate(node.firstChild, node.id)
+
+  return children + '<?php ' + handleNode(params.name, node.id) + ' = $children' + node.id + '; ?>'
+}
+
 function handleTag (node, id) {
   switch (node.name) {
     case 'param':
@@ -569,6 +591,9 @@ function handleTag (node, id) {
 
     case 'apply-default':
       return handleDefaultStatement(node, id)
+
+    case 'template':
+      return handleTemplateStatement(node, id)
 
     default:
       if (~importedComponents.indexOf(node.name)) {
