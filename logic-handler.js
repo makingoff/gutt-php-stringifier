@@ -206,6 +206,8 @@ function expression (tree) {
 
       return str
 
+    case 'const':
+      return tree.value
     case 'str':
       return expression('"' + tree.value + '"')
     case 'num':
