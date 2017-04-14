@@ -125,6 +125,8 @@ module.exports = {
     '    foreach ($elements as $element) {\n' +
     '      if (isset($element[\'comment\'])) {\n' +
     '        $result[] = \'<!--\' . $element[\'comment\'] . \'-->\';\n' +
+    '      } elseif (isset($element[\'script\'])) {\n' +
+    '        $result[] = \'<script\' . $element[\'script\'][\'attrs\'] . \'>\' . $element[\'script\'][\'text\'] . \'</script>\';\n' +
     '      } elseif (isset($element[\'text\'])) {\n' +
     '        $result[] = $element[\'text\'];\n' +
     '      } elseif (isset($element[\'tag\'])) {\n' +

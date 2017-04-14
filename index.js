@@ -604,6 +604,15 @@ function handleTag (node, id) {
   }
 }
 
+function scriptNode(node, id) {
+  return (
+    '<?php $children' + id + '[] = ["script" => ' +
+    '["attrs" => "' + (node.attrs.length ? ' ' : '') + escapeQuote(node.attrs) + '", ' +
+    '"text" => "' + escapeQuote(node.text) + '"]' +
+    '];?>'
+  )
+}
+
 function handleNode (node, id) {
   switch (node.type) {
     case 'tag':
@@ -618,6 +627,8 @@ function handleNode (node, id) {
       return logicHandler(node, id)
     case 'logic-node':
       return logicNodeHandler(node, id)
+    case 'script':
+      return scriptNode(node, id)
   }
 }
 
