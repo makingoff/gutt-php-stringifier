@@ -89,7 +89,7 @@ function handleFunction (tree) {
     case 'arr_unique':
       return 'array_unique(' + params.join(', ') + ')'
     case 'arr_join':
-      return 'implode(' + params[1] + ', ' + params[0] + ')'
+      return 'implode(' + (params[1] ? params[1] : '\'\'') + ', ' + params[0] + ')'
 
     case 'num_int':
       return 'intval(' + params.join(', ') + ')'
