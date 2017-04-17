@@ -8,14 +8,13 @@ function handleParams (params) {
 
 function handleFunction (tree) {
   var funcName
-  var params
+  var params = handleParams(tree.attrs)
 
   funcName =
     (tree.value.type === 'var' && !tree.value.keys.length ? tree.value.value : expression(tree.value))
 
   switch (funcName) {
     case 'str_sub':
-      params = handleParams(tree.attrs)
 
       if (params.length < 3) {
         params.push('NULL')
@@ -24,50 +23,39 @@ function handleFunction (tree) {
       return 'mb_substr' + '(' + params.join(', ') + ', \'UTF-8\')'
 
     case 'str_len':
-      return 'mb_strlen(' + handleParams(tree.attrs).join(', ') + ', \'UTF-8\')'
+      return 'mb_strlen(' + params.join(', ') + ', \'UTF-8\')'
 
     case 'str_replace':
-      params = handleParams(tree.attrs)
-
       return 'str_replace(' + params[1] + ', ' + params[2] + ', ' + params[0] + ')'
     case 'str_pad_right':
-      params = handleParams(tree.attrs)
-
       return 'str_pad(' + params.join(', ') + ', STR_PAD_RIGHT)'
     case 'str_pad_left':
-      params = handleParams(tree.attrs)
-
       return 'str_pad(' + params.join(', ') + ', STR_PAD_LEFT)'
     case 'str_pad_both':
-      params = handleParams(tree.attrs)
-
       return 'str_pad(' + params.join(', ') + ', STR_PAD_BOTH)'
     case 'str_split':
-      params = handleParams(tree.attrs)
-
       if (params[1] === '""') {
         return 'str_split(' + params[0] + ')'
       }
 
       return 'explode(' + params[1] + ', ' + params[0] + ')'
     case 'str_lower':
-      return 'mb_strtolower(' + handleParams(tree.attrs).join(', ') + ', \'UTF-8\')'
+      return 'mb_strtolower(' + params.join(', ') + ', \'UTF-8\')'
     case 'str_upper':
-      return 'mb_strtoupper(' + handleParams(tree.attrs).join(', ') + ', \'UTF-8\')'
+      return 'mb_strtoupper(' + params.join(', ') + ', \'UTF-8\')'
     case 'str_trim':
-      return 'trim(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'trim(' + params.join(', ') + ')'
     case 'str_ltrim':
-      return 'ltrim(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'ltrim(' + params.join(', ') + ')'
     case 'str_rtrim':
-      return 'rtrim(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'rtrim(' + params.join(', ') + ')'
     case 'str_urlencode':
-      return 'rawurlencode(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'rawurlencode(' + params.join(', ') + ')'
     case 'str_urldecode':
-      return 'rawurldecode(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'rawurldecode(' + params.join(', ') + ')'
     case 'str_htmlescape':
-      return 'htmlspecialchars(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'htmlspecialchars(' + params.join(', ') + ')'
     case 'str':
-      params = handleParams(tree.attrs)
       if (!params[1]) {
         params[1] = 0
       }
@@ -79,61 +67,58 @@ function handleFunction (tree) {
       return 'toFixed(' + params.join(', ') + ')'
 
     case 'arr_keys':
-      return 'array_keys(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_keys(' + params.join(', ') + ')'
     case 'arr_contain':
-      params = handleParams(tree.attrs)
-
       return '(array_search(' + params[1] + ', ' + params[0] + ') !== false)'
     case 'arr_values':
-      return 'array_values(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_values(' + params.join(', ') + ')'
     case 'arr_len':
-      return 'count(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'count(' + params.join(', ') + ')'
     case 'arr_pop':
-      return 'array_pop(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_pop(' + params.join(', ') + ')'
     case 'arr_shift':
-      return 'array_shift(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_shift(' + params.join(', ') + ')'
     case 'arr_slice':
-      return 'array_slice(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_slice(' + params.join(', ') + ')'
     case 'arr_splice':
-      return 'array_splice(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_splice(' + params.join(', ') + ')'
     case 'arr_pad':
-      return 'array_pad(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_pad(' + params.join(', ') + ')'
     case 'arr_reverse':
-      return 'array_reverse(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_reverse(' + params.join(', ') + ')'
     case 'arr_unique':
-      return 'array_unique(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'array_unique(' + params.join(', ') + ')'
+    case 'arr_join':
+      return 'implode(' + params[1] + ', ' + params[0] + ')'
 
     case 'num_int':
-      return 'intval(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'intval(' + params.join(', ') + ')'
     case 'num_float':
-      return 'floatval(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'floatval(' + params.join(', ') + ')'
     case 'num_pow':
-      return 'pow(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'pow(' + params.join(', ') + ')'
     case 'num_abs':
-      return 'abs(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'abs(' + params.join(', ') + ')'
     case 'num_acos':
-      return 'acos(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'acos(' + params.join(', ') + ')'
     case 'num_asin':
-      return 'asin(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'asin(' + params.join(', ') + ')'
     case 'num_atan':
-      return 'atan(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'atan(' + params.join(', ') + ')'
     case 'num_cos':
-      return 'cos(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'cos(' + params.join(', ') + ')'
     case 'num_sin':
-      return 'sin(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'sin(' + params.join(', ') + ')'
     case 'num_tan':
-      return 'tan(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'tan(' + params.join(', ') + ')'
     case 'num_round':
-      params = handleParams(tree.attrs)
-      params = params[0]
-
-      return '(' + params + ' < 0 ? round(' + params + ', 0, PHP_ROUND_HALF_DOWN) : round(' + params + ', 0, PHP_ROUND_HALF_UP))'
+      return '(' + params[0] + ' < 0 ? round(' + params[0] + ', 0, PHP_ROUND_HALF_DOWN) : round(' + params[0] + ', 0, PHP_ROUND_HALF_UP))'
     case 'num_sqrt':
-      return 'sqrt(' + handleParams(tree.attrs).join(', ') + ')'
+      return 'sqrt(' + params.join(', ') + ')'
     case 'num_rand':
       return '((float)rand()/(float)getrandmax())'
     default:
-      return funcName + '(' + handleParams(tree.attrs).join(', ') + ')'
+      return funcName + '(' + params.join(', ') + ')'
   }
 }
 
