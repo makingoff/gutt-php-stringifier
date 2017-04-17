@@ -284,4 +284,14 @@ describe ('PHP array functions', function () {
 
     return parse(template).should.eventually.equal('f')
   })
+
+  it ('arr_join', function () {
+    var template =
+      '<component>' +
+      '<variable name={$arr}  value={[1, 2, 3, 4, 5, 6, 7] } />' +
+      '{ arr_join($arr, " ") }' +
+      '</component>'
+
+    return parse(template).should.eventually.equal('1 2 3 4 5 6 7')
+  })
 })
