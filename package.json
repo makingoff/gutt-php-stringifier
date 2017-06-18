@@ -1,6 +1,9 @@
 {
   "name": "gutt-php-stringifier",
-  "version": "0.0.3",
+  "title": "Gutt php stringifier",
+  "CLISupport": true,
+  "ext": "php",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
