@@ -159,13 +159,13 @@ describe ('PHP array functions', function () {
       '<component>' +
       '<variable name={ $a} value={ [1, 2, 3, 4, 5, 6, 7, 8] } />' +
       '<variable name={ $subarr} value={ arr_splice($a, 3, 3, [1, 2, 3, 4]) } />' +
-      '< for-each item={$item} from={$subarr}>' +
+      '<for-each item={$item} from={$subarr}>' +
       '{ $item },' +
-      '</ for-each >' +
+      '</for-each >' +
       '-' +
-      '< for-each item={$item} from={$a}>' +
+      '<for-each item={$item} from={$a}>' +
       '{ $item },' +
-      '</ for-each>' +
+      '</for-each>' +
       '</component>'
 
     return parse(template).should.eventually.equal('4,5,6,-1,2,3,1,2,3,4,7,8,')
@@ -176,7 +176,7 @@ describe ('PHP array functions', function () {
       '<component><variable name={$subarr} value={ arr_pad([1, 2, 3], 7, 9) } />' +
       '<for-each item={$item} from={ ($subarr) } >' +
       '{ $item },' +
-      '< /for-each></component>'
+      '</for-each></component>'
 
     return parse(template).should.eventually.equal('1,2,3,9,9,9,9,')
   })
