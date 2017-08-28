@@ -194,7 +194,7 @@ function expression (tree) {
     case 'const':
       return tree.value
     case 'str':
-      return expression('"' + tree.value + '"')
+      return expression('"' + tree.value.replace(/"/g, '\\"') + '"')
     case 'num':
       return tree.value
     case 'leftshift':

@@ -508,7 +508,7 @@ function handleString (node) {
 
 function logicNodeHandler (node, id) {
   return (
-    '<?php $result' + id + ' = ' + logicHandler(node.expr) + ';\n' +
+    '<?php $result' + id + ' = ' + logicHandler(node) + ';\n' +
     'if (gettype($result' + id + ') === \'array\') {\n' +
     '  if (isset($result' + id + '[\'tag\']) || isset($result' + id + '[\'text\']) || isset($result' + id + '[\'comment\'])) {\n' +
     '    $children' + id + '[] = $result' + id + ';\n' +
