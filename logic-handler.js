@@ -209,6 +209,8 @@ function expression (tree) {
       return expression(tree.value[0]) + ' * ' + expression(tree.value[1])
     case 'divis':
       return expression(tree.value[0]) + ' / ' + expression(tree.value[1])
+    case 'mod':
+      return expression(tree.value[0]) + ' % ' + expression(tree.value[1])
     case 'or':
       return expression(tree.value[0]) + ' || ' + expression(tree.value[1])
     case 'and':
