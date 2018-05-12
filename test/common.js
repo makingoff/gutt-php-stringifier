@@ -659,4 +659,10 @@ describe ('PHP stringifier', function () {
 
     return parse(template).should.eventually.equal('20')
   })
+
+  it ('script tag', function () {
+    var template = 'text<script deffer src={$src}>console.log("src")</script>after'
+
+    return parse(template, { src: 'path.js' }).should.eventually.equal('text<script deffer src="path.js">console.log("src")</script>after')
+  })
 })

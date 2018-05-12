@@ -127,7 +127,15 @@ module.exports = {
     '      if (isset($element[\'comment\'])) {\n' +
     '        $result[] = \'<!--\' . $element[\'comment\'] . \'-->\';\n' +
     '      } elseif (isset($element[\'script\'])) {\n' +
-    '        $result[] = \'<script\' . $element[\'script\'][\'attrs\'] . \'>\' . $element[\'script\'][\'text\'] . \'</script>\';\n' +
+    '        $attrs = \'\';\n' +
+    '        foreach ($element[\'script\'][\'attrs\'] as $key => $value) {\n' +
+    '          if (in_array($key, $logicAttrs)) {\n' +
+    '            if ($value !== false) $attrs .= " " . $key;\n' +
+    '          } else {\n' +
+    '            $attrs .= " " . $key . ($value !== false && $value !== null ? "=\\"" . $value . "\\"" : "");\n' +
+    '          }\n' +
+    '        }\n' +
+    '        $result[] = \'<script\' . $attrs . \'>\' . $element[\'script\'][\'body\'] . \'</script>\';\n' +
     '      } elseif (isset($element[\'text\'])) {\n' +
     '        $result[] = $element[\'text\'];\n' +
     '      } elseif (isset($element[\'tag\'])) {\n' +

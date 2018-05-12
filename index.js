@@ -605,11 +605,18 @@ function handleTag (node, id) {
 }
 
 function scriptNode(node, id) {
+  var attrs = []
+
+  node.attrs.forEach(function (attr) {
+    attrs.push(attrValueHandle(attr, node.id))
+  })
+
   return (
+    attrs.join('') +
     '<?php $children' + id + '[] = ["script" => ' +
-    '["attrs" => "' + (node.attrs.length ? ' ' : '') + escapeQuote(node.attrs) + '", ' +
-    '"text" => "' + escapeQuote(node.text) + '"]' +
-    '];?>'
+    '["attrs" => $attrs' + node.id + ', ' +
+    '"body" => "' + escapeQuote(node.body.str) + '"' +
+    ']];?>'
   )
 }
 
