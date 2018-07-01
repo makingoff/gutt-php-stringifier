@@ -1,17 +1,15 @@
 var consts = ['true', 'false']
 
-function handleParams (params) {
+function handleParams (params, safeRead) {
   return params.map(function (attr) {
-    return expression(attr)
+    return expression(attr, safeRead)
   })
 }
 
 function handleFunction (tree) {
-  var funcName
-  var params = handleParams(tree.attrs)
-
-  funcName =
+  var funcName =
     (tree.value.type === 'var' && !tree.value.keys.length ? tree.value.value : expression(tree.value))
+  var params = handleParams(tree.attrs, funcName === 'classes')
 
   switch (funcName) {
     case 'str_sub':
@@ -171,7 +169,7 @@ function prepareVariableKey (key) {
   }
 }
 
-function expression (tree) {
+function expression (tree, safeRead) {
   var str = ''
   var keys
 
@@ -185,9 +183,15 @@ function expression (tree) {
 
       keys = [{type: 'str', value: tree.value}].concat(tree.keys);
 
-      str += '$state' + keys.map(function (key) {
+      var variable = '$state' + keys.map(function (key) {
         return '[' + prepareVariableKey(key) + ']'
       }).join('')
+
+      if (safeRead) {
+        str += 'isset(' + variable + ') ? ' + variable + ' : ""'
+      } else {
+        str += variable
+      }
 
       return str
 

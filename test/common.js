@@ -665,4 +665,24 @@ describe ('PHP stringifier', function () {
 
     return parse(template, { src: 'path.js' }).should.eventually.equal('text<script deffer src="path.js">console.log("src")</script>after')
   })
+
+  it ('classes helper, normal', function () {
+    var template = '<div class={classes("block", "element")}></div>'
+
+    return parse(template).should.eventually.equal('<div class="block element"></div>')
+  })
+
+  it ('classes helper, undefined', function () {
+    var template = '<div class={classes("block", $param)}></div>'
+
+    return parse(template).should.eventually.equal('<div class="block"></div>')
+  })
+
+  it ('classes helper, param', function () {
+    var template =
+      '<variable name={$class} value="element" />' +
+      '<div class={classes("block", $class)}></div>'
+
+    return parse(template).should.eventually.equal('<div class="block element"></div>')
+  })
 })

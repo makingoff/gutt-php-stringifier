@@ -7,6 +7,18 @@ module.exports = {
     'if (!defined(\'MKARR_CLOSE\')) {\n' +
     '  define(\'MKARR_CLOSE\', 1 << 1);\n' +
     '}\n' +
+    'if (!function_exists(\'classes\')) {' +
+    '  function classes() {' +
+    '    $params = func_get_args();' +
+    '    $classes = array();' +
+    '    foreach($params as $value) {' +
+    '      if (!empty($value)) {' +
+    '        $classes[] = $value;' +
+    '      }' +
+    '    }' +
+    '    return implode(\' \', $classes);' +
+    '  }' +
+    '}' +
     'if (!function_exists(\'mkArr\')) {\n' +
     '  function mkArr($start, $end, $flag) {\n' +
     '    $arr = [];\n' +
