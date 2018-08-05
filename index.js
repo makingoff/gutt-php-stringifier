@@ -1,4 +1,6 @@
+var path = require('path')
 var logicHandler = require('./logic-handler')
+var parser = require('gutt')
 var Attr = require('gutt/tokens/attr')
 var Tag = require('gutt/tokens/tag')
 var reservedTags = [
@@ -116,7 +118,7 @@ function getParentTagNode (node) {
   return node.parentNode
 }
 
-function handleDefaultTag (node, id) {
+function handleDefaultTag (node, id, filepath) {
   var children = ''
   var attrs
   var fragment = new Tag('fragment')
@@ -124,7 +126,7 @@ function handleDefaultTag (node, id) {
   linkNodeWithAttrFragment(node, fragment)
 
   if (!node.isSingle) {
-    children = node.firstChild ? handleTemplate(node.firstChild, node.id) : finishNode(node)
+    children = node.firstChild ? handleTemplate(node.firstChild, node.id, filepath) : finishNode(node)
   }
 
   attrs = attrsHandler(fragment, node.attrs)
@@ -215,7 +217,7 @@ function handleParam (node) {
   return '<?php if (!isset(' + name + ')) ' + name + ' = ' + value + ';?>'
 }
 
-function handleIfStatement (node, id) {
+function handleIfStatement (node, id, filepath) {
   var params = extractValuesFromAttrs(node.attrs, ['test'])
   var content
   var parentNode = node
@@ -224,7 +226,7 @@ function handleIfStatement (node, id) {
     parentNode = parentNode.parentNode
   }
 
-  content = node.firstChild ? handleTemplate(node.firstChild, id) : finishNode(node)
+  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
 
   if (!node.firstChild) return ''
 
@@ -232,10 +234,10 @@ function handleIfStatement (node, id) {
     mapCurrentFragmentNode[parentNode.id] = node.parentNode
   }
 
-  return '<?php if (' + handleTemplate(params.test, id) + ') { ?>\n' + content + '<?php } ?>'
+  return '<?php if (' + handleTemplate(params.test, id, filepath) + ') { ?>\n' + content + '<?php } ?>'
 }
 
-function handleIfStatementNode (node, id) {
+function handleIfStatementNode (node, id, filepath) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -248,10 +250,10 @@ function handleIfStatementNode (node, id) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleIfStatement(node, id)
+  return handleIfStatement(node, id, filepath)
 }
 
-function handleForEachStatement (node, id) {
+function handleForEachStatement (node, id, filepath) {
   var params = extractValuesFromAttrs(node.attrs, ['key', 'item', 'from'])
   var content
   var parentNode = node
@@ -261,7 +263,7 @@ function handleForEachStatement (node, id) {
     parentNode = parentNode.parentNode
   }
 
-  content = node.firstChild ? handleTemplate(node.firstChild, id) : finishNode(node)
+  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
 
   if (!node.firstChild) return ''
 
@@ -269,15 +271,15 @@ function handleForEachStatement (node, id) {
     mapCurrentFragmentNode[parentNode.id] = node.parentNode
   }
 
-  eachStatement = (params.key ? handleTemplate(params.key, id) + ' => ' : '')
+  eachStatement = (params.key ? handleTemplate(params.key, id, filepath) + ' => ' : '')
 
   return (
-    '<?php foreach (' + handleTemplate(params.from, id) + ' as ' + eachStatement +
-    handleTemplate(params.item, id) + ') { ?>' + content + '<?php } ?>'
+    '<?php foreach (' + handleTemplate(params.from, id, filepath) + ' as ' + eachStatement +
+    handleTemplate(params.item, id, filepath) + ') { ?>' + content + '<?php } ?>'
   )
 }
 
-function handleForEachStatementNode (node, id) {
+function handleForEachStatementNode (node, id, filepath) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -290,7 +292,7 @@ function handleForEachStatementNode (node, id) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleForEachStatement(node, id)
+  return handleForEachStatement(node, id, filepath)
 }
 
 function appendNodeToAttrFragment (attrFragment, node, isSetNodeAsCurrentNodeAtFragment) {
@@ -318,9 +320,9 @@ function appendNodeToAttrFragment (attrFragment, node, isSetNodeAsCurrentNodeAtF
   }
 }
 
-function handleImportStatement (node, id) {
+function handleImportStatement (node, id, filepath) {
   var params = extractValuesFromAttrs(node.attrs, ['name', 'from'])
-  var name = handleTemplate(params.name, id).match(/^([\'\"])(.*)(\1)$/)[2]
+  var name = handleTemplate(params.name, id, filepath).match(/^([\'\"])(.*)(\1)$/)[2]
 
   if (!~name.indexOf('-')) {
     throw new ParseError('Component name must contain dash (`-`) in the name', {
@@ -334,7 +336,7 @@ function handleImportStatement (node, id) {
   return '<?php $state["' + name + '"] = include(__DIR__ . "/" . ' + handleNode(params.from) + ' . ".php");?>'
 }
 
-function handleComponent (node, id) {
+function handleComponent (node, id, filepath) {
   var children = '<?php $children' + node.id + ' = [];?>'
   var attrs
   var fragment = new Tag('fragment')
@@ -347,7 +349,7 @@ function handleComponent (node, id) {
   linkNodeWithAttrFragment(node, fragment)
 
   if (!node.isSingle && node.firstChild) {
-    children += handleTemplate(node.firstChild, node.id)
+    children += handleTemplate(node.firstChild, node.id, filepath)
   }
 
   attrs = attrsHandler(fragment, node.attrs)
@@ -365,7 +367,7 @@ function handleComponent (node, id) {
   )
 }
 
-function handleVariable (node, id) {
+function handleVariable (node, id, filepath) {
   var params = extractValuesFromAttrs(node.attrs, ['name', 'value'])
 
   if (!params.name) {
@@ -385,13 +387,13 @@ function handleVariable (node, id) {
   return '<?php ' + handleNode(params.name, id) + ' = ' + handleNode(params.value, id) + '; ?>'
 }
 
-function handleSwitchStatement (node, id) {
+function handleSwitchStatement (node, id, filepath) {
   linkNodeWithSwitchMarker(node)
 
-  return handleTemplate(node.firstChild, id) + (switchMarker[node.id] & switchMarkerCase ? '<?php } ?>' : '')
+  return handleTemplate(node.firstChild, id, filepath) + (switchMarker[node.id] & switchMarkerCase ? '<?php } ?>' : '')
 }
 
-function handleSwitchStatementNode (node, id) {
+function handleSwitchStatementNode (node, id, filepath) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -404,10 +406,10 @@ function handleSwitchStatementNode (node, id) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleSwitchStatement(node, id)
+  return handleSwitchStatement(node, id, filepath)
 }
 
-function handleCaseStatement (node, id) {
+function handleCaseStatement (node, id, filepath) {
   var params
   var children
 
@@ -419,7 +421,7 @@ function handleCaseStatement (node, id) {
     throw new ParseError('<case /> must not be placed after <default />', {line: node.line, column: node.column})
   }
 
-  children = node.firstChild ? handleTemplate(node.firstChild, id) : finishNode(node)
+  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
   params = extractValuesFromAttrs(node.attrs, ['test'])
 
   if (isFirstSwitchCase(node)) {
@@ -433,7 +435,7 @@ function handleCaseStatement (node, id) {
   return '<?php } else if (' + handleNode(params.test, id) + ') {' + ' ?>' + children
 }
 
-function handleCaseStatementNode (node, id) {
+function handleCaseStatementNode (node, id, filepath) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -446,17 +448,17 @@ function handleCaseStatementNode (node, id) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleCaseStatement(node, id)
+  return handleCaseStatement(node, id, filepath)
 }
 
-function handleDefaultStatement (node, id) {
+function handleDefaultStatement (node, id, filepath) {
   var children
 
   if (node.parentNode.type !== 'tag' || (node.parentNode.name !== 'switch' && node.parentNode.name !== 'apply-switch')) {
     throw new ParseError('<default /> must be at first level inside <switch />', {line: node.line, column: node.column})
   }
 
-  children = node.firstChild ? handleTemplate(node.firstChild, id) : finishNode(node)
+  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
 
   if (isFirstSwitchCase(node)) {
     setSwitchMarkerHasDefault(node)
@@ -467,7 +469,7 @@ function handleDefaultStatement (node, id) {
   return '<?php } else {' + ' ?>' + children
 }
 
-function handleDefaultStatementNode (node, id) {
+function handleDefaultStatementNode (node, id, filepath) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -480,18 +482,18 @@ function handleDefaultStatementNode (node, id) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleDefaultStatement(node, id)
+  return handleDefaultStatement(node, id, filepath)
 }
 
 function escapeQuote (str) {
   return str.replace(/\"/g, '\\"')
 }
 
-function handleComment (node, id) {
+function handleComment (node, id, filepath) {
   return '<?php $children' + id + '[] = ["comment" => "' + escapeQuote(node.value) + '"];?>';
 }
 
-function handleText (node, id) {
+function handleText (node, id, filepath) {
   if (node.parentNode.name === 'switch' && node.text.trim().length) {
     throw new ParseError('Text node must not be placed inside <switch />', {
       line: node.line,
@@ -506,7 +508,7 @@ function handleString (node) {
   return '"' + node.value + '"'
 }
 
-function logicNodeHandler (node, id) {
+function logicNodeHandler (node, id, filepath) {
   return (
     '<?php $result' + id + ' = ' + logicHandler(node) + ';\n' +
     'if (gettype($result' + id + ') === \'array\') {\n' +
@@ -523,7 +525,7 @@ function logicNodeHandler (node, id) {
   )
 }
 
-function handleTemplateStatement (node, id) {
+function handleTemplateStatement (node, id, filepath) {
   var params = extractValuesFromAttrs(node.attrs, ['name'])
 
   if (!params.name) {
@@ -540,71 +542,81 @@ function handleTemplateStatement (node, id) {
     })
   }
 
-  var children = '<?php $children' + node.id + ' = [];?>' + handleTemplate(node.firstChild, node.id)
+  var children = '<?php $children' + node.id + ' = [];?>' + handleTemplate(node.firstChild, node.id, filepath)
 
   return children + '<?php ' + handleNode(params.name, node.id) + ' = $children' + node.id + '; ?>'
 }
 
-function handleTag (node, id) {
+function handleInlineSvg (node, id, filepath) {
+  var params = extractValuesFromAttrs(node.attrs, ['src'])
+  var svg = parser.parseFile(path.resolve(path.dirname(filepath), params.src.value))
+
+  return handleTemplate(svg.result, id, filepath)
+}
+
+function handleTag (node, id, filepath) {
   switch (node.name) {
+    case 'inline-svg':
+      return handleInlineSvg(node, id, filepath)
+
     case 'param':
-      return handleParam(node, id)
+      return handleParam(node, id, filepath)
 
     case 'variable':
-      return handleVariable(node, id)
+      return handleVariable(node, id, filepath)
 
     case 'attribute':
-      return handleTagAttribute(node, id)
+      return handleTagAttribute(node, id, filepath)
 
     case 'apply-attribute':
-      return handleTagAttributeApply(node, id)
+      return handleTagAttributeApply(node, id, filepath)
 
     case 'if':
-      return handleIfStatementNode(node, id)
+      return handleIfStatementNode(node, id, filepath)
 
     case 'apply-if':
-      return handleIfStatement(node, id)
+      return handleIfStatement(node, id, filepath)
 
     case 'for-each':
-      return handleForEachStatementNode(node, id)
+      return handleForEachStatementNode(node, id, filepath)
 
     case 'apply-for-each':
-      return handleForEachStatement(node, id)
+      return handleForEachStatement(node, id, filepath)
 
     case 'import':
-      return handleImportStatement(node, id)
+      return handleImportStatement(node, id, filepath)
 
     case 'switch':
-      return handleSwitchStatementNode(node, id)
+      return handleSwitchStatementNode(node, id, filepath)
 
     case 'case':
-      return handleCaseStatementNode(node, id)
+      return handleCaseStatementNode(node, id, filepath)
 
     case 'default':
-      return handleDefaultStatementNode(node, id)
+      return handleDefaultStatementNode(node, id, filepath)
 
     case 'apply-switch':
-      return handleSwitchStatement(node, id)
+      return handleSwitchStatement(node, id, filepath)
 
     case 'apply-case':
-      return handleCaseStatement(node, id)
+      return handleCaseStatement(node, id, filepath)
 
     case 'apply-default':
-      return handleDefaultStatement(node, id)
+      return handleDefaultStatement(node, id, filepath)
 
     case 'template':
-      return handleTemplateStatement(node, id)
+      return handleTemplateStatement(node, id, filepath)
 
     default:
       if (~importedComponents.indexOf(node.name)) {
-        return handleComponent(node, id)
+        return handleComponent(node, id, filepath)
       }
 
-      return handleDefaultTag(node, id)
+      return handleDefaultTag(node, id, filepath)
   }
 }
 
-function scriptNode(node, id) {
+function scriptNode(node, id, filepath) {
   var attrs = []
 
   node.attrs.forEach(function (attr) {
@@ -620,22 +632,22 @@ function scriptNode(node, id) {
   )
 }
 
-function handleNode (node, id) {
+function handleNode (node, id, filepath) {
   switch (node.type) {
     case 'tag':
-      return handleTag(node, id)
+      return handleTag(node, id, filepath)
     case 'comment':
-      return handleComment(node, id)
+      return handleComment(node, id, filepath)
     case 'text':
-      return handleText(node, id)
+      return handleText(node, id, filepath)
     case 'string':
-      return handleString(node, id)
+      return handleString(node, id, filepath)
     case 'logic':
-      return logicHandler(node, id)
+      return logicHandler(node, id, filepath)
     case 'logic-node':
-      return logicNodeHandler(node, id)
+      return logicNodeHandler(node, id, filepath)
     case 'script':
-      return scriptNode(node, id)
+      return scriptNode(node, id, filepath)
   }
 }
 
@@ -659,11 +671,11 @@ function finishNode (node) {
   return ''
 }
 
-function handleTemplate (node, id) {
+function handleTemplate (node, id, filepath) {
   var buffer = []
 
   while (node) {
-    buffer.push(handleNode(node, id))
+    buffer.push(handleNode(node, id, filepath))
 
     if (!node.nextSibling) break;
 
@@ -677,8 +689,8 @@ function handleTemplate (node, id) {
   return buffer.join('')
 }
 
-module.exports = function (template) {
-  var templateResult = handleTemplate(template, 0)
+module.exports = function (template, source, filepath) {
+  var templateResult = handleTemplate(template, 0, filepath)
 
   return prefix + templateResult + postfix
 }
