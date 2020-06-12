@@ -685,4 +685,28 @@ describe ('PHP stringifier', function () {
 
     return parse(template).should.eventually.equal('<div class="block element"></div>')
   })
+
+  it ('use-state', function () {
+    var subComponentName = generateName()
+    var template =
+      '<import name="sub-component" from="' + subComponentName + '" />'+
+      '<sub-component />'
+    var subComponnent =
+      '<use-state name={$passed-data} value={["not", "passed", "data"]} />' +
+      '<use-state name={$not-passed-data} value={["not", "passed", "data"]} />' +
+      '<use-state name={$required} />' +
+      '<for-each item={$word} from={$passed-data}>' +
+      '<span>{$word}</span>' +
+      '</for-each>' +
+      '<for-each item={$word} from={$not-passed-data}>' +
+      '<span>{$word}</span>' +
+      '</for-each>' +
+      '<span>{$required}</span>'
+
+    return parseAndWriteFile(subComponnent, subComponentName + '.php')
+      .then(function () {
+        return parse(template, { 'passed-data': ['passed', 'data'], required: 'required' })
+      })
+      .should.eventually.equal('<span>passed</span><span>data</span><span>not</span><span>passed</span><span>data</span><span>required</span>')
+  })
 })

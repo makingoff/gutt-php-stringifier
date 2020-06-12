@@ -15,7 +15,8 @@ var reservedTags = [
   'default',
   'apply-switch',
   'apply-case',
-  'apply-default'
+  'apply-default',
+  'use-state'
 ]
 var pairedTags = [
   'if',
@@ -68,26 +69,26 @@ function extractValuesFromAttrs (attrs, fields) {
   return result
 }
 
-function attrValueHandle (attr, id) {
+function attrValueHandle (attr, id, filepath, ctx) {
   var name
   var value
 
   if (attr.name) {
-    name = handleNode(attr.name)
-    value = attr.value === null ? 'false' : handleNode(attr.value)
+    name = handleNode(attr.name, id, filepath, ctx)
+    value = attr.value === null ? 'false' : handleNode(attr.value, id, filepath, ctx)
 
     return '<?php $attrs' + id + '[' + name + '] = ' + value + ';?>'
   }
 
-  return '<?php $attrs' + id + '[\'' + handleNode(attr.value) + '\'] = false;?>'
+  return '<?php $attrs' + id + '[\'' + handleNode(attr.value, id, filepath, ctx) + '\'] = false;?>'
 }
 
-function attrsHandler (fragment, attrs) {
+function attrsHandler (fragment, attrs, filepath, ctx) {
   var result = []
-  var attrsFragment = fragment.firstChild ? handleTemplate(fragment.firstChild) : finishNode(fragment)
+  var attrsFragment = fragment.firstChild ? handleTemplate(fragment.firstChild, fragment.id, filepath, ctx) : finishNode(fragment)
 
   attrs.forEach(function (attr) {
-    result.push(attrValueHandle(attr, fragment.id))
+    result.push(attrValueHandle(attr, fragment.id, filepath, ctx))
   })
 
   return '<?php $attrs' + fragment.id + ' = [];?>' + result.join('') + attrsFragment
@@ -118,7 +119,7 @@ function getParentTagNode (node) {
   return node.parentNode
 }
 
-function handleDefaultTag (node, id, filepath) {
+function handleDefaultTag (node, id, filepath, ctx) {
   var children = ''
   var attrs
   var fragment = new Tag('fragment')
@@ -126,10 +127,10 @@ function handleDefaultTag (node, id, filepath) {
   linkNodeWithAttrFragment(node, fragment)
 
   if (!node.isSingle) {
-    children = node.firstChild ? handleTemplate(node.firstChild, node.id, filepath) : finishNode(node)
+    children = node.firstChild ? handleTemplate(node.firstChild, node.id, filepath, ctx) : finishNode(node)
   }
 
-  attrs = attrsHandler(fragment, node.attrs)
+  attrs = attrsHandler(fragment, node.attrs, filepath, ctx)
 
   if (node.name === '!DOCTYPE') {
     return attrs + '<?php $children' + id + '[] = ["tag" => "' + node.name + '", "attrs" => $attrs' + fragment.id + '];?>'
@@ -167,7 +168,7 @@ function handleTagAttribute (node) {
   return ''
 }
 
-function handleTagAttributeApply (node) {
+function handleTagAttributeApply (node, id, filepath, ctx) {
   var fragment = node
   var params = extractValuesFromAttrs(node.attrs, ['name', 'value'])
 
@@ -189,10 +190,10 @@ function handleTagAttributeApply (node) {
     fragment = fragment.parentNode
   }
 
-  return attrValueHandle(new Attr(params.name, params.value), fragment.id)
+  return attrValueHandle(new Attr(params.name, params.value), fragment.id, filepath, ctx)
 }
 
-function handleParam (node) {
+function handleParam (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['name', 'value'])
   var name
   var value
@@ -211,13 +212,13 @@ function handleParam (node) {
     })
   }
 
-  name = handleNode(params.name)
-  value = handleNode(params.value)
+  name = handleNode(params.name, id, filepath, ctx)
+  value = handleNode(params.value, id, filepath, ctx)
 
   return '<?php if (!isset(' + name + ')) ' + name + ' = ' + value + ';?>'
 }
 
-function handleIfStatement (node, id, filepath) {
+function handleIfStatement (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['test'])
   var content
   var parentNode = node
@@ -226,7 +227,7 @@ function handleIfStatement (node, id, filepath) {
     parentNode = parentNode.parentNode
   }
 
-  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
+  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath, ctx) : finishNode(node)
 
   if (!node.firstChild) return ''
 
@@ -234,10 +235,10 @@ function handleIfStatement (node, id, filepath) {
     mapCurrentFragmentNode[parentNode.id] = node.parentNode
   }
 
-  return '<?php if (' + handleTemplate(params.test, id, filepath) + ') { ?>\n' + content + '<?php } ?>'
+  return '<?php if (' + handleTemplate(params.test, id, filepath, ctx) + ') { ?>\n' + content + '<?php } ?>'
 }
 
-function handleIfStatementNode (node, id, filepath) {
+function handleIfStatementNode (node, id, filepath, ctx) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -250,10 +251,10 @@ function handleIfStatementNode (node, id, filepath) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleIfStatement(node, id, filepath)
+  return handleIfStatement(node, id, filepath, ctx)
 }
 
-function handleForEachStatement (node, id, filepath) {
+function handleForEachStatement (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['key', 'item', 'from'])
   var content
   var parentNode = node
@@ -263,7 +264,7 @@ function handleForEachStatement (node, id, filepath) {
     parentNode = parentNode.parentNode
   }
 
-  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
+  content = node.firstChild ? handleTemplate(node.firstChild, id, filepath, ctx) : finishNode(node)
 
   if (!node.firstChild) return ''
 
@@ -271,15 +272,15 @@ function handleForEachStatement (node, id, filepath) {
     mapCurrentFragmentNode[parentNode.id] = node.parentNode
   }
 
-  eachStatement = (params.key ? handleTemplate(params.key, id, filepath) + ' => ' : '')
+  eachStatement = (params.key ? handleTemplate(params.key, id, filepath, ctx) + ' => ' : '')
 
   return (
-    '<?php foreach (' + handleTemplate(params.from, id, filepath) + ' as ' + eachStatement +
-    handleTemplate(params.item, id, filepath) + ') { ?>' + content + '<?php } ?>'
+    '<?php foreach (' + handleTemplate(params.from, id, filepath, ctx) + ' as ' + eachStatement +
+    handleTemplate(params.item, id, filepath, ctx) + ') { ?>' + content + '<?php } ?>'
   )
 }
 
-function handleForEachStatementNode (node, id, filepath) {
+function handleForEachStatementNode (node, id, filepath, ctx) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -292,7 +293,7 @@ function handleForEachStatementNode (node, id, filepath) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleForEachStatement(node, id, filepath)
+  return handleForEachStatement(node, id, filepath, ctx)
 }
 
 function appendNodeToAttrFragment (attrFragment, node, isSetNodeAsCurrentNodeAtFragment) {
@@ -320,7 +321,7 @@ function appendNodeToAttrFragment (attrFragment, node, isSetNodeAsCurrentNodeAtF
   }
 }
 
-function handleImportStatement (node, id, filepath) {
+function handleImportStatement (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['name', 'from'])
   var name = handleTemplate(params.name, id, filepath).match(/^([\'\"])(.*)(\1)$/)[2]
 
@@ -333,10 +334,10 @@ function handleImportStatement (node, id, filepath) {
 
   importedComponents.push(name)
 
-  return '<?php $state["' + name + '"] = include(__DIR__ . "/" . ' + handleNode(params.from) + ' . ".php");?>'
+  return '<?php $__components["' + name + '"] = include(__DIR__ . "/" . ' + handleNode(params.from) + ' . ".php");?>'
 }
 
-function handleComponent (node, id, filepath) {
+function handleComponent (node, id, filepath, ctx) {
   var children = '<?php $children' + node.id + ' = [];?>'
   var attrs
   var fragment = new Tag('fragment')
@@ -349,25 +350,25 @@ function handleComponent (node, id, filepath) {
   linkNodeWithAttrFragment(node, fragment)
 
   if (!node.isSingle && node.firstChild) {
-    children += handleTemplate(node.firstChild, node.id, filepath)
+    children += handleTemplate(node.firstChild, node.id, filepath, ctx)
   }
 
-  attrs = attrsHandler(fragment, node.attrs)
+  attrs = attrsHandler(fragment, node.attrs, filepath, ctx)
 
   if (node.isSingle || ~singleTags.indexOf(node.name)) {
     return (
-      attrs + '<?php $result' + node.id + ' = $state["' + node.name + '"]' +
-      '(' + attrsOutput + ', [], true); ?>' + copyResultChilds
+      attrs + '<?php $result' + node.id + ' = $__components["' + node.name + '"]' +
+      '(' + attrsOutput + ', [], true, $__state); ?>' + copyResultChilds
     )
   }
 
   return (
-    attrs + children + '<?php $result' + node.id + ' = $state["' + node.name + '"]' +
-    '(' + attrsOutput + ', $children' + node.id + ', true); ?>' + copyResultChilds
+    attrs + children + '<?php $result' + node.id + ' = $__components["' + node.name + '"]' +
+    '(' + attrsOutput + ', $children' + node.id + ', true, $__state); ?>' + copyResultChilds
   )
 }
 
-function handleVariable (node, id, filepath) {
+function handleVariable (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['name', 'value'])
 
   if (!params.name) {
@@ -384,16 +385,16 @@ function handleVariable (node, id, filepath) {
     })
   }
 
-  return '<?php ' + handleNode(params.name, id) + ' = ' + handleNode(params.value, id) + '; ?>'
+  return '<?php ' + handleNode(params.name, id, filepath, ctx, true) + ' = ' + handleNode(params.value, id, filepath, ctx) + '; ?>'
 }
 
-function handleSwitchStatement (node, id, filepath) {
+function handleSwitchStatement (node, id, filepath, ctx) {
   linkNodeWithSwitchMarker(node)
 
-  return handleTemplate(node.firstChild, id, filepath) + (switchMarker[node.id] & switchMarkerCase ? '<?php } ?>' : '')
+  return handleTemplate(node.firstChild, id, filepath, ctx) + (switchMarker[node.id] & switchMarkerCase ? '<?php } ?>' : '')
 }
 
-function handleSwitchStatementNode (node, id, filepath) {
+function handleSwitchStatementNode (node, id, filepath, ctx) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -406,10 +407,10 @@ function handleSwitchStatementNode (node, id, filepath) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleSwitchStatement(node, id, filepath)
+  return handleSwitchStatement(node, id, filepath, ctx)
 }
 
-function handleCaseStatement (node, id, filepath) {
+function handleCaseStatement (node, id, filepath, ctx) {
   var params
   var children
 
@@ -421,21 +422,21 @@ function handleCaseStatement (node, id, filepath) {
     throw new ParseError('<case /> must not be placed after <default />', {line: node.line, column: node.column})
   }
 
-  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
+  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath, ctx) : finishNode(node)
   params = extractValuesFromAttrs(node.attrs, ['test'])
 
   if (isFirstSwitchCase(node)) {
     setSwitchMarkerHasCase(node)
 
-    return '<?php if (' + handleNode(params.test, id) + ') {' + ' ?>' + children
+    return '<?php if (' + handleNode(params.test, id, filepath, ctx) + ') {' + ' ?>' + children
   }
 
   params = extractValuesFromAttrs(node.attrs, ['test'])
 
-  return '<?php } else if (' + handleNode(params.test, id) + ') {' + ' ?>' + children
+  return '<?php } else if (' + handleNode(params.test, id, filepath, ctx) + ') {' + ' ?>' + children
 }
 
-function handleCaseStatementNode (node, id, filepath) {
+function handleCaseStatementNode (node, id, filepath, ctx) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -448,28 +449,29 @@ function handleCaseStatementNode (node, id, filepath) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleCaseStatement(node, id, filepath)
+  return handleCaseStatement(node, id, filepath, ctx)
 }
 
-function handleDefaultStatement (node, id, filepath) {
+function handleDefaultStatement (node, id, filepath, ctx) {
   var children
 
   if (node.parentNode.type !== 'tag' || (node.parentNode.name !== 'switch' && node.parentNode.name !== 'apply-switch')) {
     throw new ParseError('<default /> must be at first level inside <switch />', {line: node.line, column: node.column})
   }
 
-  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath) : finishNode(node)
+  children = node.firstChild ? handleTemplate(node.firstChild, id, filepath, ctx) : finishNode(node)
 
   if (isFirstSwitchCase(node)) {
     setSwitchMarkerHasDefault(node)
+
     return children
   }
 
   setSwitchMarkerHasDefault(node)
-  return '<?php } else {' + ' ?>' + children
+  return '<?php } else { ?>' + children
 }
 
-function handleDefaultStatementNode (node, id, filepath) {
+function handleDefaultStatementNode (node, id, filepath, ctx) {
   var parentNode = getParentTagNode(node)
   var attrFragment = getAttrFragmentByNode(parentNode)
   var clonedNode
@@ -482,18 +484,18 @@ function handleDefaultStatementNode (node, id, filepath) {
     appendNodeToAttrFragment(attrFragment, clonedNode)
   }
 
-  return handleDefaultStatement(node, id, filepath)
+  return handleDefaultStatement(node, id, filepath, ctx)
 }
 
 function escapeQuote (str) {
   return str.replace(/\"/g, '\\"')
 }
 
-function handleComment (node, id, filepath) {
+function handleComment (node, id) {
   return '<?php $children' + id + '[] = ["comment" => "' + escapeQuote(node.value) + '"];?>';
 }
 
-function handleText (node, id, filepath) {
+function handleText (node, id) {
   if (node.parentNode.name === 'switch' && node.text.trim().length) {
     throw new ParseError('Text node must not be placed inside <switch />', {
       line: node.line,
@@ -508,24 +510,24 @@ function handleString (node) {
   return '"' + node.value + '"'
 }
 
-function logicNodeHandler (node, id, filepath) {
+function logicNodeHandler (node, id, filepath, ctx) {
   return (
-    '<?php $result' + id + ' = ' + logicHandler(node) + ';\n' +
+    '<?php $result' + id + ' = ' + logicHandler(node, ctx) + ';\n' +
     'if (gettype($result' + id + ') === \'array\') {\n' +
     '  if (isset($result' + id + '[\'tag\']) || isset($result' + id + '[\'text\']) || isset($result' + id + '[\'comment\'])) {\n' +
     '    $children' + id + '[] = $result' + id + ';\n' +
     '  } else {\n' +
     '    foreach($result' + id + ' as $item' + id + ') {\n' +
     '      $children' + id + '[] = $item' + id + ';\n' +
-    '    }' +
-    '  }' +
+    '    }\n' +
+    '  }\n' +
     '} else {\n' +
     '  $children' + id + '[] = ["text" => $result' + id + '];\n' +
     '} ?>'
   )
 }
 
-function handleTemplateStatement (node, id, filepath) {
+function handleTemplateStatement (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['name'])
 
   if (!params.name) {
@@ -542,85 +544,124 @@ function handleTemplateStatement (node, id, filepath) {
     })
   }
 
-  var children = '<?php $children' + node.id + ' = [];?>' + handleTemplate(node.firstChild, node.id, filepath)
+  var children = '<?php $children' + node.id + ' = [];?>' + handleTemplate(node.firstChild, node.id, filepath, ctx)
 
-  return children + '<?php ' + handleNode(params.name, node.id) + ' = $children' + node.id + '; ?>'
+  return children + '<?php ' + handleNode(params.name, node.id, filepath, ctx) + ' = $children' + node.id + '; ?>'
 }
 
-function handleInlineSvg (node, id, filepath) {
+function handleUseStateStatement(node, id, filepath, ctx) {
+  var params = extractValuesFromAttrs(node.attrs, ['name', 'value'])
+
+  if (!params.name) {
+    throw new ParseError('<use-state /> must contain `name`-attribute', {
+      line: node.line,
+      column: node.column
+    })
+  }
+
+  if (!node.isSingle) {
+    throw new ParseError('<use-state /> must be self-closing tag', {
+      line: node.line,
+      column: node.column
+    })
+  }
+
+  if (params.name.type !== 'logic' || params.name.expr.type !== 'var') {
+    throw new ParseError('Attribute name at <use-state /> has to be variable', {
+      line: params.name.line,
+      column: params.name.column
+    })
+  }
+
+  if (params.name.expr.keys.length) {
+    throw new ParseError('Attribute name at <use-state /> has to be without any fields. `$var.field` — forbiden. Should be just `$var`', {
+      line: params.name.line,
+      column: params.name.column
+    })
+  }
+
+  return '<?php ' + handleNode(params.name, node.id, filepath, ctx, true) +
+    ' = isset($__state["' + params.name.expr.value + '"]) ? $__state["' + params.name.expr.value + '"] : ' +
+    (typeof params.value !== 'undefined' ? handleNode(params.value, node.id, filepath, ctx) : 'null') + '; ?>';
+}
+
+function handleInlineSvg (node, id, filepath, ctx) {
   var params = extractValuesFromAttrs(node.attrs, ['src'])
   var svg = parser.parseFile(path.resolve(path.dirname(filepath), params.src.value))
 
-  return handleTemplate(svg.result, id, filepath)
+  return handleTemplate(svg.result, id, filepath, ctx)
 }
 
-function handleTag (node, id, filepath) {
+function handleTag (node, id, filepath, ctx) {
   switch (node.name) {
     case 'inline-svg':
-      return handleInlineSvg(node, id, filepath)
+      return handleInlineSvg(node, id, filepath, ctx)
 
     case 'param':
-      return handleParam(node, id, filepath)
+      return handleParam(node, id, filepath, ctx)
 
     case 'variable':
-      return handleVariable(node, id, filepath)
+      return handleVariable(node, id, filepath, ctx)
 
     case 'attribute':
-      return handleTagAttribute(node, id, filepath)
+      return handleTagAttribute(node, id, filepath, ctx)
 
     case 'apply-attribute':
-      return handleTagAttributeApply(node, id, filepath)
+      return handleTagAttributeApply(node, id, filepath, ctx)
 
     case 'if':
-      return handleIfStatementNode(node, id, filepath)
+      return handleIfStatementNode(node, id, filepath, ctx)
 
     case 'apply-if':
-      return handleIfStatement(node, id, filepath)
+      return handleIfStatement(node, id, filepath, ctx)
 
     case 'for-each':
-      return handleForEachStatementNode(node, id, filepath)
+      return handleForEachStatementNode(node, id, filepath, ctx)
 
     case 'apply-for-each':
-      return handleForEachStatement(node, id, filepath)
+      return handleForEachStatement(node, id, filepath, ctx)
 
     case 'import':
-      return handleImportStatement(node, id, filepath)
+      return handleImportStatement(node, id, filepath, ctx)
 
     case 'switch':
-      return handleSwitchStatementNode(node, id, filepath)
+      return handleSwitchStatementNode(node, id, filepath, ctx)
 
     case 'case':
-      return handleCaseStatementNode(node, id, filepath)
+      return handleCaseStatementNode(node, id, filepath, ctx)
 
     case 'default':
-      return handleDefaultStatementNode(node, id, filepath)
+      return handleDefaultStatementNode(node, id, filepath, ctx)
 
     case 'apply-switch':
-      return handleSwitchStatement(node, id, filepath)
+      return handleSwitchStatement(node, id, filepath, ctx)
 
     case 'apply-case':
-      return handleCaseStatement(node, id, filepath)
+      return handleCaseStatement(node, id, filepath, ctx)
 
     case 'apply-default':
-      return handleDefaultStatement(node, id, filepath)
+      return handleDefaultStatement(node, id, filepath, ctx)
 
     case 'template':
-      return handleTemplateStatement(node, id, filepath)
+      return handleTemplateStatement(node, id, filepath, ctx)
+
+    case 'use-state':
+      return handleUseStateStatement(node, id, filepath, ctx)
 
     default:
       if (~importedComponents.indexOf(node.name)) {
-        return handleComponent(node, id, filepath)
+        return handleComponent(node, id, filepath, ctx)
       }
 
-      return handleDefaultTag(node, id, filepath)
+      return handleDefaultTag(node, id, filepath, ctx)
   }
 }
 
-function scriptNode(node, id, filepath) {
+function scriptNode(node, id, filepath, ctx) {
   var attrs = []
 
   node.attrs.forEach(function (attr) {
-    attrs.push(attrValueHandle(attr, node.id))
+    attrs.push(attrValueHandle(attr, node.id, filepath, ctx))
   })
 
   return (
@@ -632,22 +673,22 @@ function scriptNode(node, id, filepath) {
   )
 }
 
-function handleNode (node, id, filepath) {
+function handleNode (node, id, filepath, ctx, isToWrite) {
   switch (node.type) {
     case 'tag':
-      return handleTag(node, id, filepath)
+      return handleTag(node, id, filepath, ctx)
     case 'comment':
-      return handleComment(node, id, filepath)
+      return handleComment(node, id, filepath, ctx)
     case 'text':
-      return handleText(node, id, filepath)
+      return handleText(node, id, filepath, ctx)
     case 'string':
-      return handleString(node, id, filepath)
+      return handleString(node, id, filepath, ctx)
     case 'logic':
-      return logicHandler(node, id, filepath)
+      return logicHandler(node, ctx, isToWrite)
     case 'logic-node':
-      return logicNodeHandler(node, id, filepath)
+      return logicNodeHandler(node, id, filepath, ctx)
     case 'script':
-      return scriptNode(node, id, filepath)
+      return scriptNode(node, id, filepath, ctx)
   }
 }
 
@@ -671,11 +712,11 @@ function finishNode (node) {
   return ''
 }
 
-function handleTemplate (node, id, filepath) {
+function handleTemplate (node, id, filepath, ctx) {
   var buffer = []
 
   while (node) {
-    buffer.push(handleNode(node, id, filepath))
+    buffer.push(handleNode(node, id, filepath, ctx))
 
     if (!node.nextSibling) break;
 
@@ -690,7 +731,9 @@ function handleTemplate (node, id, filepath) {
 }
 
 module.exports = function (template, source, filepath) {
-  var templateResult = handleTemplate(template, 0, filepath)
+  var templateResult = handleTemplate(template, 0, filepath, {
+    stack: []
+  })
 
   return prefix + templateResult + postfix
 }

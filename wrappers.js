@@ -7,18 +7,18 @@ module.exports = {
     'if (!defined(\'MKARR_CLOSE\')) {\n' +
     '  define(\'MKARR_CLOSE\', 1 << 1);\n' +
     '}\n' +
-    'if (!function_exists(\'classes\')) {' +
-    '  function classes() {' +
-    '    $params = func_get_args();' +
-    '    $classes = array();' +
-    '    foreach($params as $value) {' +
-    '      if (!empty($value)) {' +
-    '        $classes[] = $value;' +
-    '      }' +
-    '    }' +
-    '    return implode(\' \', $classes);' +
-    '  }' +
-    '}' +
+    'if (!function_exists(\'classes\')) {\n' +
+    '  function classes() {\n' +
+    '    $params = func_get_args();\n' +
+    '    $classes = array();\n' +
+    '    foreach($params as $value) {\n' +
+    '      if (!empty($value)) {\n' +
+    '        $classes[] = $value;\n' +
+    '      }\n' +
+    '    }\n' +
+    '    return implode(\' \', $classes);\n' +
+    '  }\n' +
+    '}\n' +
     'if (!function_exists(\'mkArr\')) {\n' +
     '  function mkArr($start, $end, $flag) {\n' +
     '    $arr = [];\n' +
@@ -166,12 +166,10 @@ module.exports = {
     '    return implode(\'\', $result);\n' +
     '  }\n'+
     '}\n' +
-    '$__components = [];\n' +
-    'return function ($__data = [], $__children = false, $returnAsElements = false) {\n' +
-    '  $state = [];\n' +
-    '  foreach ($__data as $__key => $__value) {\n' +
-    '    $state[$__key] = $__value;\n' +
-    '  }\n' +
+    'return function ($__data = [], $__children = false, $returnAsElements = false, $__state = null) {\n' +
+    '  $__components = [];\n' +
+    '  $__stack = [];\n' +
+    '  if (is_null($__state)) $__state = $__data;\n' +
     '  $children0 = [];\n' +
     '  ob_start();\n' +
     '// >>> GENERATED CODE\n' +

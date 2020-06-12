@@ -1,15 +1,15 @@
 var consts = ['true', 'false']
 
-function handleParams (params, safeRead) {
+function handleParams (params, safeRead, ctx) {
   return params.map(function (attr) {
-    return expression(attr, safeRead)
+    return expression(attr, ctx, safeRead)
   })
 }
 
-function handleFunction (tree) {
+function handleFunction (tree, ctx) {
   var funcName =
-    (tree.value.type === 'var' && !tree.value.keys.length ? tree.value.value : expression(tree.value))
-  var params = handleParams(tree.attrs, funcName === 'classes')
+    (tree.value.type === 'var' && !tree.value.keys.length ? tree.value.value : expression(tree.value, ctx))
+  var params = handleParams(tree.attrs, funcName === 'classes', ctx)
 
   switch (funcName) {
     case 'str_sub':
@@ -120,7 +120,7 @@ function handleFunction (tree) {
   }
 }
 
-function handleArray (source) {
+function handleArray (source, ctx) {
   var key = 0
   var isKeyProper = true
   var result = []
@@ -134,7 +134,7 @@ function handleArray (source) {
 
   if (isKeyProper) {
     source.forEach(function (item) {
-      result.push(expression(item.value))
+      result.push(expression(item.value, ctx))
     })
 
     return '[' + result.join(',') + ']'
@@ -144,9 +144,9 @@ function handleArray (source) {
 
   source.forEach(function (item) {
     if (item.key === null) {
-      result[key++] = expression(item.value)
+      result[key++] = expression(item.value, ctx)
     } else {
-      result[expression(item.key)] = expression(item.value)
+      result[expression(item.key, ctx)] = expression(item.value, ctx)
     }
   })
 
@@ -159,17 +159,17 @@ function handleArray (source) {
   return '[' + str.join(', ') + ']'
 }
 
-function prepareVariableKey (key) {
+function prepareVariableKey (key, ctx) {
   switch (key.type) {
     case 'num':
     case 'var':
-      return expression(key);
+      return expression(key, ctx);
     case 'str':
-      return '\'' + expression(key.value) + '\'';
+      return '\'' + expression(key.value, ctx) + '\'';
   }
 }
 
-function expression (tree, safeRead) {
+function expression (tree, ctx, isSafeRead, isToWrite) {
   var str = ''
   var keys
 
@@ -181,13 +181,19 @@ function expression (tree, safeRead) {
 
       if (~consts.indexOf(tree.value)) return tree.value
 
-      keys = [{type: 'str', value: tree.value}].concat(tree.keys);
+      keys = [{ type: 'str', value: tree.value }].concat(tree.keys);
 
-      var variable = '$state' + keys.map(function (key) {
-        return '[' + prepareVariableKey(key) + ']'
+      if (isToWrite && keys.length === 1) {
+        if (ctx.stack.indexOf(tree.value) === -1) {
+          ctx.stack.push(tree.value)
+        }
+      }
+
+      var variable = (ctx.stack.indexOf(tree.value) > -1 ? '$__stack' : '$__data') + keys.map(function (key) {
+        return '[' + prepareVariableKey(key, ctx) + ']'
       }).join('')
 
-      if (safeRead) {
+      if (isSafeRead) {
         str += 'isset(' + variable + ') ? ' + variable + ' : ""'
       } else {
         str += variable
@@ -198,97 +204,96 @@ function expression (tree, safeRead) {
     case 'const':
       return tree.value
     case 'str':
-      return expression('"' + tree.value.replace(/"/g, '\\"') + '"')
+      return expression('"' + tree.value.replace(/"/g, '\\"') + '"', ctx)
     case 'num':
       return tree.value
     case 'leftshift':
-      return expression(tree.value[0]) + ' << ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' << ' + expression(tree.value[1], ctx)
     case 'rightshift':
-      return expression(tree.value[0]) + ' >> ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' >> ' + expression(tree.value[1], ctx)
     case 'plus':
-      return expression(tree.value[0]) + ' + ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' + ' + expression(tree.value[1], ctx)
     case 'minus':
-      return expression(tree.value[0]) + ' - ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' - ' + expression(tree.value[1], ctx)
     case 'mult':
-      return expression(tree.value[0]) + ' * ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' * ' + expression(tree.value[1], ctx)
     case 'divis':
-      return expression(tree.value[0]) + ' / ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' / ' + expression(tree.value[1], ctx)
     case 'mod':
-      return expression(tree.value[0]) + ' % ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' % ' + expression(tree.value[1], ctx)
     case 'or':
-      return expression(tree.value[0]) + ' || ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' || ' + expression(tree.value[1], ctx)
     case 'and':
-      return expression(tree.value[0]) + ' && ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' && ' + expression(tree.value[1], ctx)
     case 'bitnot':
-      return ' ~ ' + expression(tree.value)
+      return ' ~ ' + expression(tree.value, ctx)
     case 'bitor':
-      return expression(tree.value[0]) + ' | ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' | ' + expression(tree.value[1], ctx)
     case 'bitand':
-      return expression(tree.value[0]) + ' & ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' & ' + expression(tree.value[1], ctx)
     case 'bitxor':
-      return expression(tree.value[0]) + ' ^ ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' ^ ' + expression(tree.value[1], ctx)
     case 'notequal':
     case 'notequal':
-      return expression(tree.value[0]) + ' != ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' != ' + expression(tree.value[1], ctx)
     case 'equal':
-      return expression(tree.value[0]) + ' == ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' == ' + expression(tree.value[1], ctx)
     case 'gtequal':
-      return expression(tree.value[0]) + ' >= ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' >= ' + expression(tree.value[1], ctx)
     case 'gt':
-      return expression(tree.value[0]) + ' > ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' > ' + expression(tree.value[1], ctx)
     case 'lt':
-      return expression(tree.value[0]) + ' < ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' < ' + expression(tree.value[1], ctx)
     case 'ltequal':
-      return expression(tree.value[0]) + ' <= ' + expression(tree.value[1])
+      return expression(tree.value[0], ctx) + ' <= ' + expression(tree.value[1], ctx)
     case 'isset':
-      return 'isset(' + expression(tree.value) + ')'
+      return 'isset(' + expression(tree.value, ctx) + ')'
     case 'not':
-      return '!' + expression(tree.value)
+      return '!' + expression(tree.value, ctx)
     case 'brack':
-      return '(' + expression(tree.value) + ')'
+      return '(' + expression(tree.value, ctx) + ')'
     case 'uminus':
-      return '-' + expression(tree.value)
+      return '-' + expression(tree.value, ctx)
     case 'func':
-      return handleFunction(tree)
+      return handleFunction(tree, ctx)
     case 'concat':
       return tree.value.map(function (item) {
-        return expression(item)
+        return expression(item, ctx)
       }).join(' . ')
 
     case 'array':
       if (tree.range) {
         switch (tree.range.type) {
           case 'open':
-            str = 'mkArr(' + expression(tree.range.value[0])
-            str += ', ' + expression(tree.range.value[1])
+            str = 'mkArr(' + expression(tree.range.value[0], ctx)
+            str += ', ' + expression(tree.range.value[1], ctx)
             str += ', MKARR_OPEN)'
 
             return str
 
           case 'close':
-            str = 'mkArr(' + expression(tree.range.value[0])
-            str += ', ' + expression(tree.range.value[1])
+            str = 'mkArr(' + expression(tree.range.value[0], ctx)
+            str += ', ' + expression(tree.range.value[1], ctx)
             str += ', MKARR_CLOSE)'
 
             return str
         }
       }
 
-      return handleArray(tree.values)
+      return handleArray(tree.values, ctx)
   }
 
   return str
 }
 
-function logicHandler (node) {
+function logicHandler (node, ctx, isToWrite) {
   var value
 
   if (node.expr.type === 'isset') {
-    value = expression(node.expr.value)
-    return '(isset(' + value + ') ? ' + value + ' : "" )'
+    return expression(node.expr.value, ctx, true, isToWrite)
   }
 
-  return expression(node.expr)
+  return expression(node.expr, ctx, false, isToWrite)
 }
 
 module.exports = logicHandler
