@@ -260,6 +260,8 @@ function expression (tree, ctx, isSafeRead, isToWrite) {
       return tree.value.map(function (item) {
         return expression(item, ctx)
       }).join(' . ')
+    case 'ternary':
+      return '(' + expression(tree.value[0], ctx) + ' ? ' + expression(tree.value[1], ctx) + ' : ' + expression(tree.value[2], ctx) + ')';
 
     case 'array':
       if (tree.range) {

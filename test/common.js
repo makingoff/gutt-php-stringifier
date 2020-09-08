@@ -709,4 +709,16 @@ describe ('PHP stringifier', function () {
       })
       .should.eventually.equal('<span>passed</span><span>data</span><span>not</span><span>passed</span><span>data</span><span>required</span>')
   })
+
+  it ('ternary operator operator1', function () {
+    var template = '<div>{$a > $b ?? "bigger" !! "smaller"}</div>'
+
+    return parse(template, { a: 1, b: 0 }).should.eventually.equal('<div>bigger</div>')
+  })
+
+  it ('ternary operator operator2', function () {
+    var template = '<div>{$a > $b ?? "bigger" !! "smaller"}</div>'
+
+    return parse(template, { a: 1, b: 2 }).should.eventually.equal('<div>smaller</div>')
+  })
 })
