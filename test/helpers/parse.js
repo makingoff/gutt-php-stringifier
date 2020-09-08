@@ -31,7 +31,11 @@ function parseAndWriteFile (test, tmpFileName) {
   try {
     fs.accessSync(tmpFilesDirPath, fs.F_OK)
   } catch (e) {
-    fs.mkdir(tmpFilesDirPath)
+    fs.mkdir(tmpFilesDirPath, function (err) {
+      if (err) {
+        console.error(err)
+      }
+    })
   }
 
   resultFile = parser.parse(test).stringifyWith(phpStringifier)
