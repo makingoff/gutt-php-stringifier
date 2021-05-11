@@ -665,6 +665,7 @@ function scriptNode(node, id, filepath, ctx) {
   })
 
   return (
+    '<?php $attrs' + node.id + ' = [];?>' +
     attrs.join('') +
     '<?php $children' + id + '[] = ["script" => ' +
     '["attrs" => $attrs' + node.id + ', ' +
